@@ -355,12 +355,28 @@
    Replace these two values with your own project's URL and anon
    public key (Project Settings → API in your Supabase dashboard).
    See SETUP_GUIDE.md for full instructions. */
-const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE".trim();
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE".trim();
 
-const supabase = (SUPABASE_URL.startsWith("http"))
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+let supabase = null;
+let supabaseLoadError = false;
+try{
+  const keysProvided = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== "YOUR_SUPABASE_ANON_KEY_HERE";
+  if(keysProvided){
+    if(window.supabase && typeof window.supabase.createClient === "function"){
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      // The Supabase library script tag failed to load (CDN blocked,
+      // offline, ad-blocker, etc.) — fail safe instead of crashing
+      // the rest of the page's JavaScript.
+      supabaseLoadError = true;
+      console.error("Supabase library did not load. Check your network connection or whether the CDN script is blocked.");
+    }
+  }
+} catch(e){
+  supabaseLoadError = true;
+  console.error("Failed to initialise Supabase client:", e);
+}
 
 const ROW_ID = "main";
 
@@ -374,7 +390,7 @@ let state = {
   loaded: false
 };
 let isAdmin = false;
-let configError = !supabase;
+let configError = !supabase || supabaseLoadError;
 
 function cid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -488,11 +504,14 @@ function openAdminModal(){
   const root = document.getElementById("modalRoot");
 
   if(configError){
+    const msg = supabaseLoadError
+      ? "Could not load the Supabase library. This usually means a network or ad-blocker issue, or the connection to Supabase's servers failed. Try reloading the page or checking your network settings."
+      : "This site isn't connected to a Supabase project yet, so there is no admin account to log into. See SETUP_GUIDE.md to connect storage and create your admin login.";
     root.innerHTML = `
       <div class="modal-overlay" id="ovl">
         <div class="modal">
-          <h2>Storage not configured</h2>
-          <p class="sub">This site isn't connected to a Supabase project yet, so there is no admin account to log into. See SETUP_GUIDE.md to connect storage and create your admin login.</p>
+          <h2>${supabaseLoadError ? "Connection problem" : "Storage not configured"}</h2>
+          <p class="sub">${msg}</p>
           <div class="modal-actions">
             <button class="btn btn-solid btn-small" id="closeCfg">Close</button>
           </div>
@@ -577,10 +596,6 @@ function confirmModal({title, sub, confirmLabel="Confirm", danger=false}){
 /* ============================================================
    PUBLIC RENDER
    ============================================================ */
-
-  const SUPABASE_URL = "https://eaqsqpepfixrredkcfqd.supabase.co/rest/v1/";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhcXNxcGVwZml4cnJlZGtjZnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NzA5NzAsImV4cCI6MjA5NzU0Njk3MH0.nQkXiwyehLVLOLFlmlAuzr2TgApv9vebXMMcUUR6YzQ";
-  
 function renderAll(){
   renderDebatesSection();
   renderArticlesSection();
@@ -949,6 +964,10 @@ function renderCategoryForm(wrap, existing){
 }
 
 /* ---------- Debate form with dynamic counter-arguments + rebuttals ---------- */
+
+ const SUPABASE_URL = "https://eaqsqpepfixrredkcfqd.supabase.co".trim();
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhcXNxcGVwZml4cnJlZGtjZnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NzA5NzAsImV4cCI6MjA5NzU0Njk3MH0.nQkXiwyehLVLOLFlmlAuzr2TgApv9vebXMMcUUR6YzQ".trim();
+  
 function renderDebateForm(wrap, existing){
   const isEdit = !!existing;
 
@@ -1202,12 +1221,17 @@ function renderPagesForm(wrap){
 /* ---------- Init ---------- */
 (async function init(){
   if(supabase){
-    const { data } = await supabase.auth.getSession();
-    isAdmin = !!(data && data.session);
-    supabase.auth.onAuthStateChange((_event, session)=>{
-      isAdmin = !!session;
-      updateAdminBar();
-    });
+    try{
+      const { data } = await supabase.auth.getSession();
+      isAdmin = !!(data && data.session);
+      supabase.auth.onAuthStateChange((_event, session)=>{
+        isAdmin = !!session;
+        updateAdminBar();
+      });
+    } catch(e){
+      console.error("Could not check Supabase session:", e);
+      isAdmin = false;
+    }
   }
   updateAdminBar();
   await loadData();
