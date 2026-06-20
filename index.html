@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conservative Renewal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
     --navy:#0A1F3D;
@@ -227,6 +228,7 @@
   .modal .sub{font-size:13px;color:var(--gray);margin-bottom:4px;}
   .modal-actions{display:flex;gap:10px;margin-top:24px;justify-content:flex-end;}
   .hidden{display:none !important;}
+  .login-field{margin-bottom:0;}
 
   /* ---------- FOOTER ---------- */
   footer{background:#0B0C0E;color:var(--gray-light);font-size:13px;}
@@ -349,11 +351,18 @@
    CONSERVATIVE RENEWAL — single-page site, shared storage
    ============================================================ */
 
-const SUPABASE_URL = "https://eaqsqpepfixrredkcfqd.supabase.co/rest/v1/";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhcXNxcGVwZml4cnJlZGtjZnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NzA5NzAsImV4cCI6MjA5NzU0Njk3MH0.nQkXiwyehLVLOLFlmlAuzr2TgApv9vebXMMcUUR6YzQ";
+/* ---------- Supabase configuration ----------
+   Replace these two values with your own project's URL and anon
+   public key (Project Settings → API in your Supabase dashboard).
+   See SETUP_GUIDE.md for full instructions. */
+const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
 
-const ADMIN_CODE = "renewal2026";
-const STORE_KEY = "cr-data-v3";
+const supabase = (SUPABASE_URL.startsWith("http"))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+const ROW_ID = "main";
 
 let state = {
   categories: [],
@@ -364,11 +373,12 @@ let state = {
   legal: "",
   loaded: false
 };
-let isAdmin = sessionStorage.getItem("cr-admin") === "1";
+let isAdmin = false;
+let configError = !supabase;
 
 function cid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-/* ---------- Default content ---------- */
+/* ---------- Default content (used only if the table is empty) ---------- */
 function defaultData(){
   return {
     categories: [
@@ -385,32 +395,59 @@ function defaultData(){
   };
 }
 
-/* ---------- Storage ---------- */
+/* ---------- Storage (Supabase) ---------- */
 async function loadData(){
-  try{
-    const res = await window.storage.get(STORE_KEY, true);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
-      state = { ...defaultData(), ...parsed };
-    } else {
-      state = defaultData();
-      await saveData();
-    }
-  } catch(e){
+  if(configError){
     state = defaultData();
-    try { await saveData(); } catch(e2){}
+    state.loaded = true;
+    return;
+  }
+  try{
+    const { data, error } = await supabase
+      .from("site_content")
+      .select("data")
+      .eq("id", ROW_ID)
+      .single();
+    if(error) throw error;
+    state = { ...defaultData(), ...(data ? data.data : {}) };
+  } catch(e){
+    console.error("Failed to load site content from Supabase:", e);
+    state = defaultData();
   }
   state.loaded = true;
 }
+
 async function saveData(){
-  await window.storage.set(STORE_KEY, JSON.stringify({
+  if(configError) throw new Error("Supabase is not configured.");
+  const payload = {
     categories: state.categories,
     debates: state.debates,
     articles: state.articles,
     about: state.about,
     contactEmail: state.contactEmail,
     legal: state.legal
-  }), true);
+  };
+  const { error } = await supabase
+    .from("site_content")
+    .update({ data: payload, updated_at: new Date().toISOString() })
+    .eq("id", ROW_ID);
+  if(error){
+    console.error("Failed to save site content to Supabase:", error);
+    throw error;
+  }
+}
+
+/* Wrapper used by all admin forms: shows a clear alert if saving
+   fails (e.g. session expired, not logged in, network issue) so
+   changes are never silently lost. */
+async function saveDataSafe(){
+  try{
+    await saveData();
+    return true;
+  } catch(e){
+    alert("Could not save your changes. You may have been logged out, or there is a connection issue. Please check you are still logged in and try again.");
+    return false;
+  }
 }
 
 /* ---------- Helpers ---------- */
@@ -424,7 +461,7 @@ function formatDate(iso){
 function categoryById(id){ return state.categories.find(c=>c.id===id); }
 function debatesInCategory(catId){ return state.debates.filter(d=>d.categoryId===catId); }
 
-/* ---------- Admin auth ---------- */
+/* ---------- Admin auth (Supabase Auth: real email + password) ---------- */
 document.getElementById("adminToggleBtn").addEventListener("click", ()=>{
   if(isAdmin){
     document.getElementById("adminArea").classList.remove("hidden");
@@ -433,9 +470,9 @@ document.getElementById("adminToggleBtn").addEventListener("click", ()=>{
     openAdminModal();
   }
 });
-document.getElementById("logoutBtn").addEventListener("click", ()=>{
+document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+  if(supabase) await supabase.auth.signOut();
   isAdmin = false;
-  sessionStorage.removeItem("cr-admin");
   document.getElementById("adminArea").classList.add("hidden");
   updateAdminBar();
   renderAll();
@@ -449,17 +486,38 @@ function updateAdminBar(){
 
 function openAdminModal(){
   const root = document.getElementById("modalRoot");
+
+  if(configError){
+    root.innerHTML = `
+      <div class="modal-overlay" id="ovl">
+        <div class="modal">
+          <h2>Storage not configured</h2>
+          <p class="sub">This site isn't connected to a Supabase project yet, so there is no admin account to log into. See SETUP_GUIDE.md to connect storage and create your admin login.</p>
+          <div class="modal-actions">
+            <button class="btn btn-solid btn-small" id="closeCfg">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const close0 = ()=>{ root.innerHTML = ""; };
+    document.getElementById("ovl").addEventListener("click", (e)=>{ if(e.target.id==="ovl") close0(); });
+    document.getElementById("closeCfg").addEventListener("click", close0);
+    return;
+  }
+
   root.innerHTML = `
     <div class="modal-overlay" id="ovl">
       <div class="modal">
-        <h2>Administrator access</h2>
-        <p class="sub">Enter the access code to manage debates, articles, and pages.</p>
-        <label>Access code</label>
-        <input type="password" id="adminCodeInput" placeholder="••••••••">
-        <p class="error-text hidden" id="adminErr">Incorrect code.</p>
+        <h2>Administrator login</h2>
+        <p class="sub">Log in with your admin email and password to manage debates, articles, and pages.</p>
+        <label class="login-field">Email</label>
+        <input type="text" id="adminEmailInput" placeholder="you@example.com" autocomplete="username">
+        <label>Password</label>
+        <input type="password" id="adminPasswordInput" placeholder="••••••••" autocomplete="current-password">
+        <p class="error-text hidden" id="adminErr">Incorrect email or password.</p>
         <div class="modal-actions">
           <button class="btn btn-small" id="cancelAdmin">Cancel</button>
-          <button class="btn btn-solid btn-small" id="confirmAdmin">Enter</button>
+          <button class="btn btn-solid btn-small" id="confirmAdmin">Log in</button>
         </div>
       </div>
     </div>
@@ -467,23 +525,31 @@ function openAdminModal(){
   const close = ()=>{ root.innerHTML = ""; };
   document.getElementById("ovl").addEventListener("click", (e)=>{ if(e.target.id==="ovl") close(); });
   document.getElementById("cancelAdmin").addEventListener("click", close);
-  const input = document.getElementById("adminCodeInput");
-  input.focus();
-  const tryLogin = ()=>{
-    if(input.value === ADMIN_CODE){
-      isAdmin = true;
-      sessionStorage.setItem("cr-admin","1");
-      updateAdminBar();
-      close();
-      renderAll();
-      document.getElementById("adminArea").classList.remove("hidden");
-      document.getElementById("adminArea").scrollIntoView({behavior:"smooth"});
-    } else {
+  const emailInput = document.getElementById("adminEmailInput");
+  const passInput = document.getElementById("adminPasswordInput");
+  emailInput.focus();
+
+  const tryLogin = async ()=>{
+    const btn = document.getElementById("confirmAdmin");
+    btn.textContent = "Logging in…";
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: emailInput.value.trim(),
+      password: passInput.value
+    });
+    if(error || !data.session){
       document.getElementById("adminErr").classList.remove("hidden");
+      btn.textContent = "Log in";
+      return;
     }
+    isAdmin = true;
+    updateAdminBar();
+    close();
+    renderAll();
+    document.getElementById("adminArea").classList.remove("hidden");
+    document.getElementById("adminArea").scrollIntoView({behavior:"smooth"});
   };
   document.getElementById("confirmAdmin").addEventListener("click", tryLogin);
-  input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") tryLogin(); });
+  passInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") tryLogin(); });
 }
 
 function confirmModal({title, sub, confirmLabel="Confirm", danger=false}){
@@ -511,6 +577,10 @@ function confirmModal({title, sub, confirmLabel="Confirm", danger=false}){
 /* ============================================================
    PUBLIC RENDER
    ============================================================ */
+
+  const SUPABASE_URL = "https://eaqsqpepfixrredkcfqd.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhcXNxcGVwZml4cnJlZGtjZnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NzA5NzAsImV4cCI6MjA5NzU0Njk3MH0.nQkXiwyehLVLOLFlmlAuzr2TgApv9vebXMMcUUR6YzQ";
+  
 function renderAll(){
   renderDebatesSection();
   renderArticlesSection();
@@ -751,7 +821,8 @@ function renderAdminDashboard(wrap){
         if(ok){
           state.categories = state.categories.filter(x=>x.id!==c.id);
           state.debates = state.debates.filter(d=>d.categoryId!==c.id);
-          await saveData();
+          const ok2 = await saveDataSafe();
+          if(!ok2) return;
           renderAll();
         }
       });
@@ -792,7 +863,8 @@ function renderAdminDashboard(wrap){
         });
         if(ok){
           state.debates = state.debates.filter(x=>x.id!==d.id);
-          await saveData();
+          const ok2 = await saveDataSafe();
+          if(!ok2) return;
           renderAll();
         }
       });
@@ -830,7 +902,8 @@ function renderAdminDashboard(wrap){
         });
         if(ok){
           state.articles = state.articles.filter(x=>x.id!==a.id);
-          await saveData();
+          const ok2 = await saveDataSafe();
+          if(!ok2) return;
           renderAll();
         }
       });
@@ -868,7 +941,8 @@ function renderCategoryForm(wrap, existing){
     if(!title){ document.getElementById("catErr").classList.remove("hidden"); return; }
     if(isEdit){ existing.title = title; existing.desc = desc; }
     else { state.categories.push({ id: cid(), title, desc }); }
-    await saveData();
+    const ok3 = await saveDataSafe();
+    if(!ok3) return;
     renderAll();
     goAdmin("dashboard");
   });
@@ -1040,7 +1114,8 @@ function renderDebateForm(wrap, existing){
     } else {
       state.debates.push({ id: cid(), question, position, stance: stanceValue, categoryId, counters: cleanCounters, createdAt: Date.now() });
     }
-    await saveData();
+    const ok3 = await saveDataSafe();
+    if(!ok3) return;
     renderAll();
     goAdmin("dashboard");
   }
@@ -1082,7 +1157,8 @@ function renderArticleForm(wrap, existing){
     if(!title || !content){ document.getElementById("artErr").classList.remove("hidden"); return; }
     if(isEdit){ existing.title = title; existing.content = content; existing.excerpt = excerpt; }
     else { state.articles.push({ id: cid(), title, content, excerpt, createdAt: Date.now() }); }
-    await saveData();
+    const ok3 = await saveDataSafe();
+    if(!ok3) return;
     renderAll();
     goAdmin("dashboard");
   });
@@ -1116,7 +1192,8 @@ function renderPagesForm(wrap){
     state.about = document.getElementById("aboutText").value.trim();
     state.contactEmail = document.getElementById("contactEmailInput").value.trim();
     state.legal = document.getElementById("legalText").value.trim();
-    await saveData();
+    const ok3 = await saveDataSafe();
+    if(!ok3) return;
     renderAll();
     goAdmin("dashboard");
   });
@@ -1124,6 +1201,14 @@ function renderPagesForm(wrap){
 
 /* ---------- Init ---------- */
 (async function init(){
+  if(supabase){
+    const { data } = await supabase.auth.getSession();
+    isAdmin = !!(data && data.session);
+    supabase.auth.onAuthStateChange((_event, session)=>{
+      isAdmin = !!session;
+      updateAdminBar();
+    });
+  }
   updateAdminBar();
   await loadData();
   renderAll();
