@@ -16,7 +16,10 @@
     --gray-light:#6E7278;
     --off-white:#F4F4F2;
     --black:#0B0C0E;
-    --accent:#C9844F;
+    --accent:#5B85B8;
+    --accent-dark:#3F6493;
+    --support:#3B5C82;
+    --oppose:#5A6772;
     --radius-sm:6px;
     --radius-md:10px;
     --radius-lg:16px;
@@ -70,7 +73,7 @@
 
   /* ---------- HERO ---------- */
   #hero{
-    background:linear-gradient(180deg, var(--navy) 0%, var(--navy) 60%, var(--charcoal) 100%);
+    background:linear-gradient(180deg, var(--navy) 0%, var(--navy) 75%, var(--charcoal) 100%);
     padding-top:84px;padding-bottom:64px;
   }
   #hero .wrap{display:flex;flex-direction:column;gap:18px;max-width:760px;}
@@ -91,34 +94,39 @@
   .cat-desc{font-size:13.5px;color:var(--gray);}
 
   .debate-block{background:var(--charcoal-light);border-radius:var(--radius-lg);padding:28px;margin-bottom:18px;}
-  .debate-question{font-size:19px;font-weight:600;color:var(--off-white);margin-bottom:18px;}
-  .stance{display:flex;gap:14px;border-radius:var(--radius-md);padding:16px 18px;margin-bottom:18px;background:rgba(201,132,79,0.1);}
+  .debate-question{font-size:19px;font-weight:600;color:var(--off-white);margin-bottom:22px;}
+
+  .counter-label{font-size:11.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-light);margin-bottom:12px;}
+  .counter-pair{
+    border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;
+    background:rgba(91,133,184,0.07);border-left:3px solid var(--accent);
+  }
+  .counter-pair:last-of-type{margin-bottom:24px;}
+  .counter-arg-row{display:flex;align-items:flex-start;gap:10px;padding:14px 16px 12px;}
+  .counter-num{
+    display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+    border-radius:50%;background:rgba(244,244,242,0.12);font-size:11px;font-weight:600;
+    color:var(--gray);flex-shrink:0;margin-top:1px;
+  }
+  .counter-arg-text{font-size:14px;color:var(--gray);font-style:italic;white-space:pre-wrap;}
+  .rebuttal-list{display:flex;flex-direction:column;gap:1px;}
+  .rebuttal{padding:12px 16px 12px 46px;border-top:1px solid rgba(244,244,242,0.08);}
+  .rebuttal .tag-mini{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:5px;display:block;}
+  .rebuttal p{font-size:14px;color:#D8DBDF;white-space:pre-wrap;}
+  .no-rebuttal{font-size:13px;color:var(--gray-light);padding:0 16px 14px 46px;font-style:italic;}
+
+  .stance{
+    display:flex;gap:14px;border-radius:var(--radius-md);padding:16px 18px;
+    background:rgba(91,133,184,0.12);border-top:1px solid rgba(244,244,242,0.1);
+    margin-top:22px;padding-top:22px;
+  }
   .stance .tag{
     flex-shrink:0;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;
     color:#fff;background:var(--navy);padding:5px 10px;border-radius:var(--radius-sm);height:fit-content;
   }
-  .stance.support .tag{background:#2F5D3A;}
-  .stance.oppose .tag{background:#7A3B2E;}
-  .stance p{font-size:14.5px;color:#DCDAD3;white-space:pre-wrap;}
-
-  .counter-label{font-size:11.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-light);margin-bottom:12px;}
-  .counter-group{
-    border-radius:var(--radius-md);padding:16px 18px;margin-bottom:12px;
-    background:rgba(255,255,255,0.04);
-  }
-  .counter-group:last-child{margin-bottom:0;}
-  .counter-num{
-    display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-    border-radius:50%;background:rgba(244,244,242,0.12);font-size:11px;font-weight:600;
-    color:var(--gray);margin-right:8px;flex-shrink:0;
-  }
-  .counter-arg-text{font-size:14px;color:var(--gray);font-style:italic;white-space:pre-wrap;display:inline;}
-  .counter-arg-row{display:flex;align-items:flex-start;gap:0;margin-bottom:12px;}
-  .rebuttal-list{display:flex;flex-direction:column;gap:8px;margin-left:28px;}
-  .rebuttal{background:rgba(58,93,154,0.14);border-radius:var(--radius-md);padding:12px 14px;}
-  .rebuttal .tag-mini{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:#7FA8E0;font-weight:600;margin-bottom:5px;display:block;}
-  .rebuttal p{font-size:14px;color:#DCDAD3;white-space:pre-wrap;}
-  .no-rebuttal{font-size:13px;color:var(--gray-light);margin-left:28px;font-style:italic;}
+  .stance.support .tag{background:var(--support);}
+  .stance.oppose .tag{background:var(--oppose);}
+  .stance p{font-size:14.5px;color:#D8DBDF;white-space:pre-wrap;}
 
   /* ---------- ARTICLES ---------- */
   #articles{background:var(--navy);}
@@ -136,13 +144,13 @@
   .article-detail{background:var(--navy-light);border-radius:var(--radius-lg);padding:32px;max-width:720px;}
   .article-detail .meta{font-size:12px;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray);margin-bottom:10px;}
   .article-detail h3{font-size:24px;font-weight:600;color:var(--off-white);margin-bottom:18px;}
-  .article-detail .content{font-size:15.5px;color:#DCDAD3;white-space:pre-wrap;}
+  .article-detail .content{font-size:15.5px;color:#D8DBDF;white-space:pre-wrap;}
 
   /* ---------- ABOUT ---------- */
   #about{background:var(--charcoal);}
   #about .content-card{
     background:var(--charcoal-light);border-radius:var(--radius-lg);padding:32px;max-width:760px;
-    font-size:15.5px;color:#DCDAD3;white-space:pre-wrap;
+    font-size:15.5px;color:#D8DBDF;white-space:pre-wrap;
   }
 
   .empty{padding:36px 20px;text-align:center;color:var(--gray-light);font-size:14px;background:var(--charcoal-light);border-radius:var(--radius-lg);}
@@ -155,9 +163,9 @@
   }
   .btn:hover{background:rgba(244,244,242,0.08);border-color:rgba(244,244,242,0.5);}
   .btn-solid{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .btn-solid:hover{background:#B6713F;border-color:#B6713F;}
+  .btn-solid:hover{background:var(--accent-dark);border-color:var(--accent-dark);}
   .btn-danger{border-color:rgba(244,244,242,0.25);color:var(--gray);}
-  .btn-danger:hover{background:#7A3B2E;color:#fff;border-color:#7A3B2E;}
+  .btn-danger:hover{background:var(--black);color:#fff;border-color:var(--black);}
   .btn-small{padding:7px 14px;font-size:11.5px;}
   .btn-tiny{padding:4px 10px;font-size:10.5px;}
 
@@ -179,14 +187,14 @@
   textarea{min-height:120px;resize:vertical;line-height:1.6;}
   .form-actions{margin-top:24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
   .hint{font-size:12px;color:var(--gray-light);margin-top:6px;}
-  .error-text{color:#E08A7A;font-size:12.5px;margin-top:10px;}
+  .error-text{color:#B7BCC4;font-size:12.5px;margin-top:10px;}
   .radio-row{display:flex;gap:10px;margin-top:8px;}
   .radio-opt{
     flex:1;border:1px solid rgba(244,244,242,0.15);border-radius:var(--radius-md);
     padding:10px 14px;text-align:center;font-size:13px;cursor:pointer;transition:background .15s,border-color .15s;
   }
-  .radio-opt.selected.support{background:rgba(47,93,58,0.4);border-color:#2F5D3A;}
-  .radio-opt.selected.oppose{background:rgba(122,59,46,0.4);border-color:#7A3B2E;}
+  .radio-opt.selected.support{background:rgba(59,92,130,0.35);border-color:var(--support);}
+  .radio-opt.selected.oppose{background:rgba(90,103,114,0.35);border-color:var(--oppose);}
 
   /* ---------- counter-arg builder (admin) ---------- */
   .ca-block{
@@ -645,7 +653,10 @@ function renderDebatesSection(){
     return;
   }
 
-  list.innerHTML = state.categories.map(c=>{
+  const knownCategoryIds = new Set(state.categories.map(c=>c.id));
+  const orphanDebates = state.debates.filter(d=>!knownCategoryIds.has(d.categoryId));
+
+  let html = state.categories.map(c=>{
     const items = debatesInCategory(c.id);
     if(items.length === 0) return "";
     return `
@@ -655,6 +666,17 @@ function renderDebatesSection(){
       </div>
     `;
   }).join("");
+
+  if(orphanDebates.length > 0){
+    html += `
+      <div style="margin-top:36px;">
+        <h3 style="font-size:14px;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray);margin-bottom:14px;">Uncategorised</h3>
+        ${orphanDebates.map(d=>renderDebateBlock(d)).join("")}
+      </div>
+    `;
+  }
+
+  list.innerHTML = html;
 }
 
 function renderDebateBlock(d){
@@ -662,14 +684,11 @@ function renderDebateBlock(d){
   return `
     <div class="debate-block">
       <div class="debate-question">${escapeHtml(d.question)}</div>
-      <div class="stance ${d.stance}">
-        <span class="tag">${d.stance === 'support' ? 'We support' : 'We oppose'}</span>
-        <p>${escapeHtml(d.position)}</p>
-      </div>
+
       ${counters.length ? `
-        <div class="counter-label">Common opposing arguments &amp; our responses</div>
+        <div class="counter-label">Opposing arguments &amp; our responses</div>
         ${counters.map((c,i)=>`
-          <div class="counter-group">
+          <div class="counter-pair">
             <div class="counter-arg-row">
               <span class="counter-num">${i+1}</span>
               <span class="counter-arg-text">${escapeHtml(c.text)}</span>
@@ -687,6 +706,11 @@ function renderDebateBlock(d){
           </div>
         `).join("")}
       ` : ""}
+
+      <div class="stance ${d.stance}">
+        <span class="tag">${d.stance === 'support' ? 'We support' : 'We oppose'}</span>
+        <p>${escapeHtml(d.position)}</p>
+      </div>
     </div>
   `;
 }
